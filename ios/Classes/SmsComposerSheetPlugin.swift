@@ -71,12 +71,24 @@ public class SmsComposerSheetPlugin: NSObject, FlutterPlugin {
     }
     
     private func getRootViewController() -> UIViewController? {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = windowScene.windows.first else {
+        // Support for iOS 13+ and older versions
+        var window: UIWindow?
+        
+        if #available(iOS 13.0, *) {
+            // iOS 13+ approach using window scenes
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                window = windowScene.windows.first
+            }
+        } else {
+            // iOS 12 and earlier approach using keyWindow
+            window = UIApplication.shared.keyWindow
+        }
+        
+        guard let validWindow = window else {
             return nil
         }
         
-        var rootViewController = window.rootViewController
+        var rootViewController = validWindow.rootViewController
         while let presentedViewController = rootViewController?.presentedViewController {
             rootViewController = presentedViewController
         }

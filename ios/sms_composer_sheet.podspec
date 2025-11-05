@@ -4,14 +4,16 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'sms_composer_sheet'
-  s.version          = '0.0.1'
-  s.summary          = 'A new Flutter project.'
+  s.version          = '1.0.0'
+  s.summary          = 'A Flutter plugin that provides SMS composer with bottom sheet UI for iOS and Android'
   s.description      = <<-DESC
-A new Flutter project.
+SMS Composer Sheet provides a unified interface for SMS composition with bottom sheet UI 
+on both iOS and Android platforms. Uses native MFMessageComposeViewController on iOS 
+and SMS intents on Android for optimal user experience.
                        DESC
-  s.homepage         = 'http://example.com'
+  s.homepage         = 'https://github.com/manukumarsb/sms_composer_sheet'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Your Company' => 'email@example.com' }
+  s.author           = { 'Manukumar S B' => 'manukumarsb@example.com' }
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
