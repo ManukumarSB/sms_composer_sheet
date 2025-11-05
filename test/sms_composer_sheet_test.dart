@@ -15,7 +15,8 @@ void main() {
       );
     });
 
-    test('show throws ArgumentError for empty recipients after cleaning', () async {
+    test('show throws ArgumentError for empty recipients after cleaning',
+        () async {
       expect(
         () => SmsComposerSheet.show(recipients: ['', '  ', '\t']),
         throwsA(isA<ArgumentError>()),

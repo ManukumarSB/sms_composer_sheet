@@ -12,10 +12,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'SMS Composer Sheet Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       home: const SmsComposerDemo(),
     );
   }
@@ -74,10 +71,16 @@ class _SmsComposerDemoState extends State<SmsComposerDemo> {
         if (result.sent) {
           _showSnackBar('✅ SMS sent successfully!', Colors.green);
         } else {
-          _showSnackBar('📱 SMS composer was shown but not sent', Colors.orange);
+          _showSnackBar(
+            '📱 SMS composer was shown but not sent',
+            Colors.orange,
+          );
         }
       } else {
-        _showSnackBar('❌ Failed to show SMS composer: ${result.error}', Colors.red);
+        _showSnackBar(
+          '❌ Failed to show SMS composer: ${result.error}',
+          Colors.red,
+        );
       }
     } catch (e) {
       setState(() {

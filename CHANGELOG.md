@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-11-05
+
+### Fixed
+- 🔧 **Pub.dev compliance**: Fixed package description length to meet pub.dev requirements (60-180 characters)
+- 🔧 **Documentation URL**: Removed non-existent documentation URL until package is published
+- 🔧 **Code formatting**: Applied `dart format` to all Dart files for consistent formatting
+- 🔧 **Lint warnings**: Addressed BuildContext async gap warnings with proper ignore comments
+- 🔧 **Package validation**: Ensured all pub.dev validation requirements are met
+
+### Improved
+- 📦 **Package metadata**: Added topics for better discoverability on pub.dev
+- 📝 **Code quality**: Enhanced code formatting and documentation consistency
+
 ## [1.0.0] - 2025-11-05
 
 ### Added

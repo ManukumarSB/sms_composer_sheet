@@ -61,16 +61,18 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
     try {
       // Check and request SMS permission first
       const platform = MethodChannel('sms_composer_sheet');
-      
+
       // Check current permission status
-      final permissionResult = await platform.invokeMethod('checkSmsPermission');
+      final permissionResult =
+          await platform.invokeMethod('checkSmsPermission');
       final permissionStatus = Map<String, dynamic>.from(permissionResult);
-      
+
       if (!permissionStatus['hasPermission']) {
         // Request permission with system dialog
-        final requestResult = await platform.invokeMethod('requestSmsPermission');
+        final requestResult =
+            await platform.invokeMethod('requestSmsPermission');
         final requestStatus = Map<String, dynamic>.from(requestResult);
-        
+
         if (!requestStatus['hasPermission']) {
           // Permission denied - show error and stop
           if (mounted) {
@@ -78,7 +80,8 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
               _isSending = false;
             });
             HapticFeedback.heavyImpact();
-            _showError(requestStatus['message'] ?? 'SMS permission is required to send messages.');
+            _showError(requestStatus['message'] ??
+                'SMS permission is required to send messages.');
           }
           return;
         }
@@ -91,7 +94,7 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
       });
 
       final smsResult = SmsResult.fromMap(Map<String, dynamic>.from(result));
-      
+
       if (mounted) {
         // Show success/failure snackbar before closing
         if (smsResult.sent) {
@@ -103,7 +106,7 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
           HapticFeedback.heavyImpact();
           _showError(smsResult.error ?? 'Failed to send SMS');
         }
-        
+
         // Close the bottom sheet after showing status
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (mounted) {
@@ -117,15 +120,16 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
         setState(() {
           _isSending = false;
         });
-        
+
         // Handle specific error types
         String errorMessage = 'Failed to send SMS: $e';
         if (e.toString().contains('permission')) {
-          errorMessage = 'SMS permission required. Please grant SMS permission in device settings.';
+          errorMessage =
+              'SMS permission required. Please grant SMS permission in device settings.';
         } else if (e.toString().contains('MissingPluginException')) {
           errorMessage = 'SMS functionality not available on this platform.';
         }
-        
+
         HapticFeedback.heavyImpact();
         _showError(errorMessage);
       }
@@ -196,7 +200,7 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: const EdgeInsets.all(16),
@@ -227,7 +231,8 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
                               height: 14,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.blue),
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -239,9 +244,9 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
               ],
             ),
           ),
-          
+
           const Divider(height: 1),
-          
+
           // Form
           Flexible(
             child: SingleChildScrollView(
@@ -274,9 +279,9 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
                       ),
                     ],
                   ),
-                  
+
                   const Divider(),
-                  
+
                   // Message field
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -291,7 +296,8 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
                         keyboardType: TextInputType.multiline,
                         enabled: !_isSending,
                         onChanged: (text) {
-                          setState(() {}); // Trigger rebuild for character count
+                          setState(
+                              () {}); // Trigger rebuild for character count
                         },
                       ),
                       if (_messageController.text.isNotEmpty)
@@ -301,8 +307,8 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
                             '${_messageController.text.length} characters${_messageController.text.length > 160 ? ' (${(_messageController.text.length / 160).ceil()} SMS)' : ''}',
                             style: TextStyle(
                               fontSize: 12,
-                              color: _messageController.text.length > 160 
-                                  ? Colors.orange 
+                              color: _messageController.text.length > 160
+                                  ? Colors.orange
                                   : Colors.grey,
                             ),
                           ),

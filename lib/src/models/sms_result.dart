@@ -2,13 +2,13 @@
 class SmsResult {
   /// Whether the SMS composer was successfully presented
   final bool presented;
-  
+
   /// Whether the SMS was successfully sent
   final bool sent;
-  
+
   /// Error message if any occurred
   final String? error;
-  
+
   /// Platform-specific result code
   final String? platformResult;
 

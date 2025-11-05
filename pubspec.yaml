@@ -1,13 +1,10 @@
 name: sms_composer_sheet
-description: >
-  A Flutter plugin for native SMS composer functionality with beautiful 
-  bottom sheet UI. Supports iOS MFMessageComposeViewController and Android in-app composer 
-  with haptic feedback, character counting, and comprehensive error handling.
-version: 1.0.0
+description: A Flutter plugin for native SMS composer with beautiful bottom sheet UI. Supports iOS and Android with haptic feedback and error handling.
+version: 1.0.1
 homepage: https://github.com/manukumarsb/sms_composer_sheet
 repository: https://github.com/manukumarsb/sms_composer_sheet
 issue_tracker: https://github.com/manukumarsb/sms_composer_sheet/issues
-documentation: https://pub.dev/documentation/sms_composer_sheet/latest/
+# documentation: https://pub.dev/documentation/sms_composer_sheet/latest/
 
 topics:
   - sms

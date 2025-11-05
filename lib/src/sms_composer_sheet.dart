@@ -6,23 +6,23 @@ import 'models/sms_result.dart';
 import 'widgets/sms_composer_widget.dart';
 
 /// SMS Composer Sheet Plugin
-/// 
+///
 /// Provides a unified interface for SMS composition with bottom sheet UI
 /// on both iOS and Android platforms.
-/// 
+///
 /// iOS: Uses native MFMessageComposeViewController
 /// Android: Uses native SMS intent with bottom sheet presentation
 class SmsComposerSheet {
   static const MethodChannel _channel = MethodChannel('sms_composer_sheet');
 
   /// Show SMS composer as a bottom sheet
-  /// 
+  ///
   /// [recipients] - List of phone numbers (required, non-empty)
   /// [body] - Optional pre-filled message body
   /// [context] - Required for Android to show in-app bottom sheet
-  /// 
+  ///
   /// Returns [SmsResult] with operation details
-  /// 
+  ///
   /// Throws [ArgumentError] if recipients list is empty
   static Future<SmsResult> show({
     required List<String> recipients,
@@ -35,10 +35,8 @@ class SmsComposerSheet {
     }
 
     // Clean recipients (remove empty strings and trim whitespace)
-    final cleanRecipients = recipients
-        .map((r) => r.trim())
-        .where((r) => r.isNotEmpty)
-        .toList();
+    final cleanRecipients =
+        recipients.map((r) => r.trim()).where((r) => r.isNotEmpty).toList();
 
     if (cleanRecipients.isEmpty) {
       throw ArgumentError('No valid recipients provided');
@@ -55,7 +53,8 @@ class SmsComposerSheet {
   }
 
   /// Show native SMS composer (iOS or fallback Android)
-  static Future<SmsResult> _showNative(List<String> recipients, String? body) async {
+  static Future<SmsResult> _showNative(
+      List<String> recipients, String? body) async {
     try {
       final result = await _channel.invokeMethod('show', {
         'recipients': recipients,
@@ -64,7 +63,8 @@ class SmsComposerSheet {
 
       if (result is Map) {
         // Convert Map<Object?, Object?> to Map<String, dynamic>
-        final Map<String, dynamic> resultMap = Map<String, dynamic>.from(result);
+        final Map<String, dynamic> resultMap =
+            Map<String, dynamic>.from(result);
         return SmsResult.fromMap(resultMap);
       } else {
         return SmsResult(
@@ -97,7 +97,7 @@ class SmsComposerSheet {
   ) async {
     try {
       final completer = Completer<SmsResult>();
-      
+
       await showModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
@@ -141,7 +141,7 @@ class SmsComposerSheet {
   }
 
   /// Check if SMS can be sent on the current platform
-  /// 
+  ///
   /// Returns true if SMS functionality is available, false otherwise
   static Future<bool> canSendSms() async {
     try {
@@ -153,7 +153,7 @@ class SmsComposerSheet {
   }
 
   /// Get the current platform (for debugging purposes)
-  /// 
+  ///
   /// Returns a string identifying the platform
   static String get platformName {
     if (Platform.isIOS) {
@@ -166,7 +166,7 @@ class SmsComposerSheet {
   }
 
   /// Check SMS permission status (Android only)
-  /// 
+  ///
   /// Returns detailed information about SMS permission status
   static Future<Map<String, dynamic>> checkPermissionStatus() async {
     try {
@@ -190,7 +190,7 @@ class SmsComposerSheet {
   }
 
   /// Request SMS permission with user dialog (Android only)
-  /// 
+  ///
   /// Shows permission dialog and handles user response
   /// Returns detailed information about the permission request result
   static Future<Map<String, dynamic>> requestSmsPermission() async {
@@ -215,7 +215,7 @@ class SmsComposerSheet {
   }
 
   /// Show SMS composer with automatic permission handling
-  /// 
+  ///
   /// This method automatically checks and requests SMS permission if needed
   /// before showing the SMS composer interface
   static Future<SmsResult> showWithPermission({
@@ -229,10 +229,8 @@ class SmsComposerSheet {
     }
 
     // Clean recipients (remove empty strings and trim whitespace)
-    final cleanRecipients = recipients
-        .map((r) => r.trim())
-        .where((r) => r.isNotEmpty)
-        .toList();
+    final cleanRecipients =
+        recipients.map((r) => r.trim()).where((r) => r.isNotEmpty).toList();
 
     if (cleanRecipients.isEmpty) {
       throw ArgumentError('No valid recipients provided');
@@ -240,16 +238,28 @@ class SmsComposerSheet {
 
     // For iOS, proceed directly as no permission is needed
     if (Platform.isIOS) {
+      // ignore: use_build_context_synchronously
+      // Safe to use context here as no async operations precede this
       return show(recipients: cleanRecipients, body: body, context: context);
     }
 
-    // For Android, check and request permission if needed
+    // For Android, handle permission and SMS sending
+    return _handleAndroidPermissionAndShow(cleanRecipients, body, context);
+  }
+
+  /// Handle Android permission check and SMS composer display
+  static Future<SmsResult> _handleAndroidPermissionAndShow(
+    List<String> recipients,
+    String? body,
+    BuildContext? context,
+  ) async {
+    // Check and request permission if needed
     final permissionStatus = await checkPermissionStatus();
-    
+
     if (!permissionStatus['hasPermission']) {
       // Show permission dialog and request permission
       final permissionResult = await requestSmsPermission();
-      
+
       if (!permissionResult['hasPermission']) {
         // Permission denied, return error result
         return SmsResult(
@@ -262,15 +272,19 @@ class SmsComposerSheet {
     }
 
     // Permission granted, proceed with SMS composer
-    // Note: Context is used after async permission request. 
-    // In practice, this is safe because permission dialogs are system-level
-    // and don't affect Flutter widget tree state
-    if (Platform.isAndroid && context != null) {
-      // Use custom in-app bottom sheet for Android
-      return _showAndroidBottomSheet(context, cleanRecipients, body);
+    if (context != null) {
+      try {
+        // ignore: use_build_context_synchronously
+        // Safe to use context here as permission dialogs are system-level
+        // and don't affect Flutter widget tree state
+        return await _showAndroidBottomSheet(context, recipients, body);
+      } catch (e) {
+        // Fallback to native implementation if context is invalid
+        return _showNative(recipients, body);
+      }
     } else {
-      // Use native implementation for iOS or when context is not provided
-      return _showNative(cleanRecipients, body);
+      // Use native implementation when context is not provided
+      return _showNative(recipients, body);
     }
   }
 }
