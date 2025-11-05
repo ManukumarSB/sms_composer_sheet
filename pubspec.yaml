@@ -1,7 +1,7 @@
 name: sms_composer_sheet
-description: "A new Flutter project."
-version: 0.0.1
-homepage:
+description: "A Flutter plugin that provides SMS composer with bottom sheet UI for iOS and Android"
+version: 1.0.0
+homepage: https://github.com/manukumarsb/sms_composer_sheet
 
 environment:
   sdk: ^3.7.0

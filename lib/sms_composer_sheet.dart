@@ -1,8 +1,2 @@
-
-import 'sms_composer_sheet_platform_interface.dart';
-
-class SmsComposerSheet {
-  Future<String?> getPlatformVersion() {
-    return SmsComposerSheetPlatform.instance.getPlatformVersion();
-  }
-}
+export 'src/sms_composer_sheet.dart';
+export 'src/models/sms_result.dart';
