@@ -72,8 +72,8 @@ Add SMS permission to `android/app/src/main/AndroidManifest.xml`:
 ```dart
 import 'package:sms_composer_sheet/sms_composer_sheet.dart';
 
-// Simple SMS sending
-final result = await SmsComposerSheet.show(
+// Recommended: Use automatic permission handling
+final result = await SmsComposerSheet.showWithPermission(
   recipients: ['+1234567890'],
   body: 'Hello from Flutter!',
   context: context, // Required for Android in-app experience
@@ -82,9 +82,18 @@ final result = await SmsComposerSheet.show(
 // Handle the result
 if (result.sent) {
   print('✅ SMS sent successfully!');
+} else if (result.platformResult == 'permission_denied') {
+  print('❌ SMS permission denied');
 } else {
   print('❌ Failed: ${result.error}');
 }
+
+// Alternative: Manual SMS sending (requires permission check)
+final manualResult = await SmsComposerSheet.show(
+  recipients: ['+1234567890'],
+  body: 'Hello from Flutter!',
+  context: context,
+);
 ```
 
 ## 📖 Complete Usage Guide
@@ -115,13 +124,44 @@ final result = await SmsComposerSheet.show(
 );
 ```
 
-### Permission Status (Android)
+### Permission Handling (Android)
 
+#### Check Permission Status
 ```dart
 final permissionStatus = await SmsComposerSheet.checkPermissionStatus();
 if (!permissionStatus['hasPermission']) {
-  // Guide user to grant permission
-  _showPermissionDialog(permissionStatus['message']);
+  // Permission not granted
+  print('Status: ${permissionStatus['message']}');
+}
+```
+
+#### Request Permission with Dialog
+```dart
+final permissionResult = await SmsComposerSheet.requestSmsPermission();
+if (permissionResult['hasPermission']) {
+  // Permission granted - proceed with SMS
+  print('Permission granted!');
+} else {
+  // Permission denied - show guidance
+  _showPermissionGuidance(permissionResult['message']);
+}
+```
+
+#### Automatic Permission Handling
+```dart
+// This method automatically handles permission requests
+final result = await SmsComposerSheet.showWithPermission(
+  recipients: ['+1234567890'],
+  body: 'Hello from Flutter!',
+  context: context,
+);
+
+if (result.sent) {
+  print('✅ SMS sent successfully!');
+} else if (result.platformResult == 'permission_denied') {
+  print('❌ SMS permission denied');
+} else {
+  print('❌ Failed: ${result.error}');
 }
 ```
 
@@ -207,6 +247,34 @@ Gets detailed SMS permission status (Android only).
   'platform': String
 }
 ```
+
+##### `requestSmsPermission()`
+
+Requests SMS permission with system dialog (Android only).
+
+**Returns:** `Future<Map<String, dynamic>>`
+
+```dart
+{
+  'hasPermission': bool,
+  'message': String,
+  'platform': String
+}
+```
+
+##### `showWithPermission({required List<String> recipients, String? body, BuildContext? context})`
+
+Shows SMS composer with automatic permission handling.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recipients` | `List<String>` | ✅ | Phone numbers (non-empty list) |
+| `body` | `String?` | ❌ | Pre-filled message content |
+| `context` | `BuildContext?` | ⚠️ | Required for Android in-app composer |
+
+**Returns:** `Future<SmsResult>`
+
+**Note:** This method automatically checks and requests SMS permission before showing the composer.
 
 ##### `platformName`
 

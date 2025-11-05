@@ -188,4 +188,89 @@ class SmsComposerSheet {
       };
     }
   }
+
+  /// Request SMS permission with user dialog (Android only)
+  /// 
+  /// Shows permission dialog and handles user response
+  /// Returns detailed information about the permission request result
+  static Future<Map<String, dynamic>> requestSmsPermission() async {
+    try {
+      if (Platform.isAndroid) {
+        final result = await _channel.invokeMethod('requestSmsPermission');
+        return Map<String, dynamic>.from(result);
+      } else {
+        return {
+          'hasPermission': true,
+          'message': 'iOS does not require explicit SMS permission',
+          'platform': 'iOS'
+        };
+      }
+    } catch (e) {
+      return {
+        'hasPermission': false,
+        'message': 'Failed to request permission: $e',
+        'platform': Platform.isAndroid ? 'Android' : 'iOS'
+      };
+    }
+  }
+
+  /// Show SMS composer with automatic permission handling
+  /// 
+  /// This method automatically checks and requests SMS permission if needed
+  /// before showing the SMS composer interface
+  static Future<SmsResult> showWithPermission({
+    required List<String> recipients,
+    String? body,
+    BuildContext? context,
+  }) async {
+    // Input validation
+    if (recipients.isEmpty) {
+      throw ArgumentError('Recipients list cannot be empty');
+    }
+
+    // Clean recipients (remove empty strings and trim whitespace)
+    final cleanRecipients = recipients
+        .map((r) => r.trim())
+        .where((r) => r.isNotEmpty)
+        .toList();
+
+    if (cleanRecipients.isEmpty) {
+      throw ArgumentError('No valid recipients provided');
+    }
+
+    // For iOS, proceed directly as no permission is needed
+    if (Platform.isIOS) {
+      return show(recipients: cleanRecipients, body: body, context: context);
+    }
+
+    // For Android, check and request permission if needed
+    final permissionStatus = await checkPermissionStatus();
+    
+    if (!permissionStatus['hasPermission']) {
+      // Show permission dialog and request permission
+      final permissionResult = await requestSmsPermission();
+      
+      if (!permissionResult['hasPermission']) {
+        // Permission denied, return error result
+        return SmsResult(
+          presented: false,
+          sent: false,
+          error: permissionResult['message'],
+          platformResult: 'permission_denied',
+        );
+      }
+    }
+
+    // Permission granted, proceed with SMS composer
+    // Note: Context is used after async permission request. 
+    // In practice, this is safe because permission dialogs are system-level
+    // and don't affect Flutter widget tree state
+    if (Platform.isAndroid && context != null) {
+      // Use custom in-app bottom sheet for Android
+      return _showAndroidBottomSheet(context, cleanRecipients, body);
+    } else {
+      // Use native implementation for iOS or when context is not provided
+      return _showNative(cleanRecipients, body);
+    }
+  }
 }

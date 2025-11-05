@@ -17,7 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - ❌ **Comprehensive error handling** with detailed error messages
 - 📊 **Character counter** with real-time updates and multi-SMS indicators
 - 📳 **Haptic feedback** for success and error states
-- 🔐 **Permission handling** with helpful user guidance
+- 🔐 **Automatic permission handling** with system dialog requests (Android)
+- 🔐 **Permission status checking** with detailed user guidance
+- 🔐 **Manual permission request** with user-friendly dialog prompts
 - 📞 **Multiple recipients** support
 - 📝 **Pre-filled message** body support
 - 🔍 **SMS capability detection** across platforms
@@ -28,8 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Features
 - `SmsComposerSheet.show()` - Display SMS composer with bottom sheet UI
+- `SmsComposerSheet.showWithPermission()` - Display SMS composer with automatic permission handling
 - `SmsComposerSheet.canSendSms()` - Check SMS capability on device
 - `SmsComposerSheet.checkPermissionStatus()` - Get detailed permission status (Android)
+- `SmsComposerSheet.requestSmsPermission()` - Request SMS permission with system dialog (Android)
 - `SmsComposerSheet.platformName` - Get current platform name
 - `SmsResult` model with detailed operation feedback
 - `SmsComposerWidget` - Customizable Flutter SMS composer UI

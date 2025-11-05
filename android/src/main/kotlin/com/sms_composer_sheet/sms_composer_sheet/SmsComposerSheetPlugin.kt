@@ -16,7 +16,7 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
 
-class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.ActivityResultListener {
+class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, PluginRegistry.ActivityResultListener, PluginRegistry.RequestPermissionsResultListener {
     private lateinit var channel: MethodChannel
     private var activity: Activity? = null
     private var pendingResult: Result? = null
@@ -25,6 +25,8 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
         private const val SMS_REQUEST_CODE = 1001
         private const val SMS_PERMISSION_REQUEST_CODE = 1002
     }
+
+    private var permissionResult: Result? = null
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "sms_composer_sheet")
@@ -35,6 +37,8 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
         when (call.method) {
             "show" -> showSmsComposer(call, result)
             "sendSmsDirectly" -> sendSmsDirectly(call, result)
+            "requestSmsPermission" -> requestSmsPermission(result)
+            "checkSmsPermission" -> checkSmsPermission(result)
             "canSendSms" -> result.success(canSendSms())
             else -> result.notImplemented()
         }
@@ -266,6 +270,90 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
         }
     }
 
+    private fun requestSmsPermission(result: Result) {
+        val currentActivity = activity
+        if (currentActivity == null) {
+            result.success(mapOf(
+                "hasPermission" to false,
+                "message" to "No activity available to request permission",
+                "platform" to "Android"
+            ))
+            return
+        }
+        
+        if (ContextCompat.checkSelfPermission(currentActivity, android.Manifest.permission.SEND_SMS) 
+            == PackageManager.PERMISSION_GRANTED) {
+            result.success(mapOf(
+                "hasPermission" to true,
+                "message" to "SMS permission already granted",
+                "platform" to "Android"
+            ))
+            return
+        }
+        
+        permissionResult = result
+        ActivityCompat.requestPermissions(
+            currentActivity,
+            arrayOf(android.Manifest.permission.SEND_SMS),
+            SMS_PERMISSION_REQUEST_CODE
+        )
+    }
+    
+    private fun checkSmsPermission(result: Result) {
+        val currentActivity = activity
+        if (currentActivity == null) {
+            result.success(mapOf(
+                "hasPermission" to false,
+                "message" to "No activity available to check permission",
+                "platform" to "Android"
+            ))
+            return
+        }
+        
+        val hasPermission = ContextCompat.checkSelfPermission(
+            currentActivity, 
+            android.Manifest.permission.SEND_SMS
+        ) == PackageManager.PERMISSION_GRANTED
+        
+        result.success(mapOf(
+            "hasPermission" to hasPermission,
+            "message" to if (hasPermission) {
+                "SMS permission is granted"
+            } else {
+                "SMS permission is required to send text messages. Please grant SMS permission in device settings."
+            },
+            "platform" to "Android"
+        ))
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ): Boolean {
+        if (requestCode == SMS_PERMISSION_REQUEST_CODE) {
+            val result = permissionResult
+            permissionResult = null
+            
+            if (result != null) {
+                val granted = grantResults.isNotEmpty() && 
+                    grantResults[0] == PackageManager.PERMISSION_GRANTED
+                
+                result.success(mapOf(
+                    "hasPermission" to granted,
+                    "message" to if (granted) {
+                        "SMS permission granted successfully"
+                    } else {
+                        "SMS permission denied. You can enable it in device settings under App permissions."
+                    },
+                    "platform" to "Android"
+                ))
+            }
+            return true
+        }
+        return false
+    }
+
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?): Boolean {
         if (requestCode == SMS_REQUEST_CODE) {
             val result = pendingResult
@@ -301,6 +389,7 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
     override fun onAttachedToActivity(binding: ActivityPluginBinding) {
         activity = binding.activity
         binding.addActivityResultListener(this)
+        binding.addRequestPermissionsResultListener(this)
     }
 
     override fun onDetachedFromActivityForConfigChanges() {
@@ -310,6 +399,7 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
     override fun onReattachedToActivityForConfigChanges(binding: ActivityPluginBinding) {
         activity = binding.activity
         binding.addActivityResultListener(this)
+        binding.addRequestPermissionsResultListener(this)
     }
 
     override fun onDetachedFromActivity() {

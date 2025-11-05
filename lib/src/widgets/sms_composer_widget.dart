@@ -59,8 +59,32 @@ class _SmsComposerWidgetState extends State<SmsComposerWidget> {
     });
 
     try {
-      // Use the native Android SMS sending directly
+      // Check and request SMS permission first
       const platform = MethodChannel('sms_composer_sheet');
+      
+      // Check current permission status
+      final permissionResult = await platform.invokeMethod('checkSmsPermission');
+      final permissionStatus = Map<String, dynamic>.from(permissionResult);
+      
+      if (!permissionStatus['hasPermission']) {
+        // Request permission with system dialog
+        final requestResult = await platform.invokeMethod('requestSmsPermission');
+        final requestStatus = Map<String, dynamic>.from(requestResult);
+        
+        if (!requestStatus['hasPermission']) {
+          // Permission denied - show error and stop
+          if (mounted) {
+            setState(() {
+              _isSending = false;
+            });
+            HapticFeedback.heavyImpact();
+            _showError(requestStatus['message'] ?? 'SMS permission is required to send messages.');
+          }
+          return;
+        }
+      }
+
+      // Permission granted, proceed with SMS sending
       final result = await platform.invokeMethod('sendSmsDirectly', {
         'recipients': recipients,
         'body': _messageController.text,
