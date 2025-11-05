@@ -1,27 +1,46 @@
 # SMS Composer Sheet
 
-A Flutter plugin that provides SMS composer with bottom sheet UI for iOS and Android. This plugin offers a unified interface for sending SMS messages with native platform integration.
+[![pub package](https://img.shields.io/pub/v/sms_composer_sheet.svg)](https://pub.dev/packages/sms_composer_sheet)
+[![GitHub](https://img.shields.io/github/license/manukumarsb/sms_composer_sheet)](https://github.com/manukumarsb/sms_composer_sheet/blob/main/LICENSE)
+[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey)](https://pub.dev/packages/sms_composer_sheet)
+[![Flutter](https://img.shields.io/badge/Flutter-3.3.0%2B-blue)](https://flutter.dev/)
 
-## Features
+A Flutter plugin that provides **native SMS composer functionality** with beautiful bottom sheet UI for both iOS and Android platforms. Send SMS messages directly from your Flutter app with a seamless, cross-platform experience.
 
-- ✅ **Native SMS Composer**: Uses platform-native SMS interfaces
-- ✅ **Bottom Sheet UI**: Elegant bottom sheet presentation on iOS
-- ✅ **Cross-Platform**: Works on both iOS and Android
-- ✅ **Error Handling**: Comprehensive error handling and result feedback
-- ✅ **SMS Capability Detection**: Check if device can send SMS
-- ✅ **Multiple Recipients**: Support for multiple phone numbers
-- ✅ **Pre-filled Messages**: Optional message body pre-filling
-- ✅ **Success Notifications**: Automatic snackbar notifications for send status
-- ✅ **Character Counter**: Real-time character count with multi-SMS indicators
-- ✅ **Haptic Feedback**: Tactile feedback for success and error states
+## ✨ Features
 
-## Screenshots
+### 🎯 Core Features
+- **📱 Cross-Platform**: Unified API that works seamlessly on iOS and Android
+- **🍎 Native iOS Composer**: Uses `MFMessageComposeViewController` for authentic iOS experience  
+- **🤖 In-App Android Composer**: Custom bottom sheet that keeps users in your app
+- **✅ Success Notifications**: Automatic feedback with haptic responses
+- **📊 Smart Character Counter**: Real-time count with multi-SMS indicators
+- **🔐 Permission Handling**: Intelligent permission management with user guidance
 
-| iOS Native Composer | Android SMS Intent |
-|---------------------|-------------------|
-| MFMessageComposeViewController | Default SMS App |
+### 🚀 Advanced Features
+- **📞 Multiple Recipients**: Send to multiple phone numbers simultaneously
+- **📝 Pre-filled Messages**: Optional message body with full customization
+- **📏 Long Message Support**: Automatic splitting for messages over 160 characters
+- **🎨 Beautiful UI**: Material Design with iOS-like polish
+- **⚡ Loading States**: Smooth animations and progress indicators
+- **🛡️ Error Handling**: Comprehensive error management with helpful messages
 
-## Installation
+### 🏗️ Technical Features
+- **🔍 SMS Capability Detection**: Check device SMS support before attempting to send
+- **📳 Haptic Feedback**: Tactile responses for better user experience
+- **🌐 Wide Compatibility**: iOS 12.0+ and Android API 21+
+- **⚙️ Zero Configuration**: Works out of the box with minimal setup
+
+## 📱 Platform Behavior
+
+| Platform | Implementation | User Experience |
+|----------|---------------|------------------|
+| **iOS** | Native `MFMessageComposeViewController` | System bottom sheet, authentic iOS feel |
+| **Android** | Custom Flutter bottom sheet + `SmsManager` | In-app composer, no external app switching |
+
+## 🚀 Quick Start
+
+### 1. Installation
 
 Add this to your package's `pubspec.yaml` file:
 
@@ -30,55 +49,55 @@ dependencies:
   sms_composer_sheet: ^1.0.0
 ```
 
-Run `flutter pub get` to install.
+Then run:
 
-## Platform Setup
+```bash
+flutter pub get
+```
 
-### Android
+### 2. Platform Setup
 
+#### iOS Setup
+No additional setup required! The plugin uses the built-in MessageUI framework.
+
+#### Android Setup
 Add SMS permission to `android/app/src/main/AndroidManifest.xml`:
 
 ```xml
 <uses-permission android:name="android.permission.SEND_SMS" />
 ```
 
-### iOS
-
-No additional setup required. The plugin uses the built-in MessageUI framework.
-
-## Usage
-
-### Basic Usage
+### 3. Basic Usage
 
 ```dart
 import 'package:sms_composer_sheet/sms_composer_sheet.dart';
 
-// Send SMS with in-app composer (Android) or native composer (iOS)
+// Simple SMS sending
 final result = await SmsComposerSheet.show(
   recipients: ['+1234567890'],
   body: 'Hello from Flutter!',
-  context: context, // Required for Android in-app composer
+  context: context, // Required for Android in-app experience
 );
 
-if (result.presented) {
-  if (result.sent) {
-    print('SMS sent successfully!');
-  } else {
-    print('SMS composer was shown but not sent');
-  }
+// Handle the result
+if (result.sent) {
+  print('✅ SMS sent successfully!');
 } else {
-  print('Failed to show SMS composer: ${result.error}');
+  print('❌ Failed: ${result.error}');
 }
 ```
+
+## 📖 Complete Usage Guide
 
 ### Check SMS Capability
 
 ```dart
+// Check if device can send SMS
 final canSend = await SmsComposerSheet.canSendSms();
-if (canSend) {
-  // Show SMS button
-} else {
-  // Hide SMS functionality
+if (!canSend) {
+  // Show alternative contact methods
+  _showAlternativeOptions();
+  return;
 }
 ```
 
@@ -86,45 +105,84 @@ if (canSend) {
 
 ```dart
 final result = await SmsComposerSheet.show(
-  recipients: ['+1234567890', '+0987654321'],
-  body: 'Hello everyone!',
+  recipients: [
+    '+1234567890',
+    '+0987654321',
+    '+1122334455',
+  ],
+  body: 'Group message from Flutter app!',
+  context: context,
 );
 ```
 
-### Error Handling
+### Permission Status (Android)
+
+```dart
+final permissionStatus = await SmsComposerSheet.checkPermissionStatus();
+if (!permissionStatus['hasPermission']) {
+  // Guide user to grant permission
+  _showPermissionDialog(permissionStatus['message']);
+}
+```
+
+### Advanced Error Handling
 
 ```dart
 try {
   final result = await SmsComposerSheet.show(
-    recipients: ['+1234567890'],
-    body: 'Hello!',
+    recipients: phoneNumbers,
+    body: messageText,
+    context: context,
   );
   
-  // Handle result
-  print('Presented: ${result.presented}');
-  print('Sent: ${result.sent}');
-  print('Platform Result: ${result.platformResult}');
-  if (result.error != null) {
-    print('Error: ${result.error}');
+  // Detailed result handling
+  if (result.presented) {
+    if (result.sent) {
+      _showSuccess('SMS sent to ${phoneNumbers.length} recipients');
+    } else {
+      _showWarning('SMS composer shown but not sent');
+    }
+  } else {
+    _showError('Failed to show SMS composer: ${result.error}');
   }
+  
+} on ArgumentError catch (e) {
+  _showError('Invalid input: $e');
 } catch (e) {
-  print('Exception: $e');
+  _showError('Unexpected error: $e');
 }
 ```
 
-## API Reference
+### Platform-Specific Handling
+
+```dart
+// Check current platform
+final platform = SmsComposerSheet.platformName;
+print('Running on: $platform'); // "iOS", "Android", or "Unsupported"
+
+// Conditional behavior based on platform
+if (platform == 'iOS') {
+  // iOS-specific logic
+} else if (platform == 'Android') {
+  // Android-specific logic
+}
+```
+
+## 🎯 API Reference
 
 ### SmsComposerSheet
 
 #### Methods
 
-##### `show({required List<String> recipients, String? body})`
+##### `show({required List<String> recipients, String? body, BuildContext? context})`
 
-Shows the SMS composer with the specified recipients and optional message body.
+Shows the SMS composer interface.
 
-**Parameters:**
-- `recipients` (required): List of phone numbers
-- `body` (optional): Pre-filled message content
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recipients` | `List<String>` | ✅ | Phone numbers (non-empty list) |
+| `body` | `String?` | ❌ | Pre-filled message content |
+| `context` | `BuildContext?` | ⚠️ | Required for Android in-app composer |
 
 **Returns:** `Future<SmsResult>`
 
@@ -132,83 +190,179 @@ Shows the SMS composer with the specified recipients and optional message body.
 
 ##### `canSendSms()`
 
-Checks if the device can send SMS messages.
+Checks if the device supports SMS functionality.
 
 **Returns:** `Future<bool>`
 
+##### `checkPermissionStatus()`
+
+Gets detailed SMS permission status (Android only).
+
+**Returns:** `Future<Map<String, dynamic>>`
+
+```dart
+{
+  'hasPermission': bool,
+  'message': String,
+  'platform': String
+}
+```
+
 ##### `platformName`
 
-Gets the current platform name.
+Gets the current platform identifier.
 
-**Returns:** `String` ("iOS", "Android", or "Unsupported")
+**Returns:** `String` - "iOS", "Android", or "Unsupported"
 
 ### SmsResult
 
 Result object returned by the `show()` method.
 
-**Properties:**
-- `presented` (bool): Whether the SMS composer was successfully shown
-- `sent` (bool): Whether the SMS was sent
-- `error` (String?): Error message if any occurred
-- `platformResult` (String?): Platform-specific result code
+| Property | Type | Description |
+|----------|------|-------------|
+| `presented` | `bool` | Whether the SMS composer was successfully shown |
+| `sent` | `bool` | Whether the SMS was sent |
+| `error` | `String?` | Error message if any occurred |
+| `platformResult` | `String?` | Platform-specific result code |
 
-## Platform Behavior
+#### Result Codes
 
-### iOS
-- Uses native `MFMessageComposeViewController`
-- Presents as a bottom sheet modal
-- Provides accurate send/cancel/failure feedback
-- Works on physical devices (not iOS Simulator)
+| Platform | Code | Meaning |
+|----------|------|---------|
+| iOS | `sent` | Successfully sent |
+| iOS | `cancelled` | User cancelled |
+| iOS | `failed` | Send failed |
+| Android | `sent` | Successfully sent |
+| Android | `cancelled` | User cancelled |
+| Android | `permission_denied` | SMS permission not granted |
 
-### Android
-- **With Context**: Shows custom in-app bottom sheet SMS composer
-- **Without Context**: Falls back to SMS intent (external app)
-- Direct SMS sending using Android SmsManager
-- Supports long messages (automatically splits)
-- Requires SMS permission in manifest
+## 📱 Example App
 
-## Example App
-
-Run the example app to see the plugin in action:
+The plugin includes a comprehensive example app demonstrating all features:
 
 ```bash
-cd example
+git clone https://github.com/manukumarsb/sms_composer_sheet.git
+cd sms_composer_sheet/example
 flutter run
 ```
 
-The example app includes:
-- SMS capability detection
-- Form for entering phone numbers and messages
-- Result display with detailed feedback
-- Error handling demonstration
+**Example app features:**
+- 📱 Platform information display
+- 🔍 SMS capability detection
+- 📝 Interactive form with validation
+- 📊 Real-time character counting
+- 📋 Detailed result logging
+- 🎨 Beautiful Material Design UI
 
-## Limitations
+## ⚠️ Platform Limitations
 
-- **iOS Simulator**: SMS not available on iOS Simulator
-- **Android Emulators**: Most Android emulators don't have SMS apps installed by default
-- **Android Feedback**: Limited delivery status information on Android
-- **Permissions**: Requires appropriate SMS permissions on Android
+### iOS
+- **Simulator**: SMS not available on iOS Simulator (hardware only)
+- **Permissions**: No explicit permission required
+- **UI**: Uses system native composer (cannot be customized)
 
-## Testing
+### Android
+- **Emulators**: Basic emulators may not have SMS apps installed
+- **Permissions**: Requires `SEND_SMS` permission in manifest
+- **Battery**: Some devices may have SMS restrictions for battery optimization
 
-- **iOS**: Test on physical devices only (not iOS Simulator)
-- **Android**: Test on physical devices or emulators with Google Play Services/SMS apps installed
-- **Emulator Setup**: For Android emulators, install Google Play Store to get SMS apps
+## 🧪 Testing
 
-## Contributing
+### Recommended Testing Setup
 
-Contributions are welcome! Please read our contributing guidelines and submit pull requests to our repository.
+| Platform | Environment | SMS Support |
+|----------|-------------|-------------|
+| **iOS** | Physical device | ✅ Full support |
+| **iOS** | Simulator | ❌ Not supported |
+| **Android** | Physical device | ✅ Full support |
+| **Android** | Emulator with Play Store | ✅ Supported |
+| **Android** | Basic emulator | ❌ Limited support |
 
-## License
+### Testing Checklist
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- [ ] Test on physical devices for both platforms
+- [ ] Verify SMS permissions are granted
+- [ ] Test with single and multiple recipients
+- [ ] Test with short and long messages (160+ characters)
+- [ ] Verify error handling for invalid phone numbers
+- [ ] Test network connectivity scenarios
 
-## Changelog
+## 🛠️ Troubleshooting
 
-See [CHANGELOG.md](CHANGELOG.md) for detailed version history.
+### Common Issues
 
-## Support
+| Issue | Platform | Solution |
+|-------|----------|----------|
+| "SMS not available" | iOS Simulator | Use physical iOS device |
+| "Permission denied" | Android | Grant SMS permission in device settings |
+| "No SMS app available" | Android Emulator | Use emulator with Google Play Store |
+| External app opens | Android | Ensure `context` parameter is provided |
+| Build errors | Both | Run `flutter clean && flutter pub get` |
 
-For detailed implementation documentation, see [CLAUDE.md](CLAUDE.md).
+### Debug Steps
 
-For issues and feature requests, please use the GitHub issue tracker.
+1. **Check SMS capability:**
+   ```dart
+   final canSend = await SmsComposerSheet.canSendSms();
+   ```
+
+2. **Verify permissions (Android):**
+   ```dart
+   final status = await SmsComposerSheet.checkPermissionStatus();
+   ```
+
+3. **Enable debug logging:**
+   ```dart
+   // Check console output for detailed error messages
+   ```
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+```bash
+git clone https://github.com/manukumarsb/sms_composer_sheet.git
+cd sms_composer_sheet
+flutter pub get
+flutter analyze
+flutter test
+```
+
+### Pull Request Process
+
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Make** your changes with tests
+4. **Run** `flutter analyze` and `flutter test`
+5. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+6. **Push** to the branch (`git push origin feature/amazing-feature`)
+7. **Open** a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- Built with ❤️ for the Flutter community
+- Inspired by iOS Messages app design
+- Thanks to all contributors and users
+
+## 📞 Support
+
+- 📖 **Documentation**: [API Documentation](https://pub.dev/documentation/sms_composer_sheet/latest/)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/manukumarsb/sms_composer_sheet/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/manukumarsb/sms_composer_sheet/discussions)
+- 📧 **Email**: manukumarsb@example.com
+
+---
+
+<div align="center">
+
+**Made with ❤️ by [Manukumar S B](https://github.com/manukumarsb)**
+
+[⭐ Star this repo](https://github.com/manukumarsb/sms_composer_sheet) • [🐛 Report Bug](https://github.com/manukumarsb/sms_composer_sheet/issues) • [💡 Request Feature](https://github.com/manukumarsb/sms_composer_sheet/issues)
+
+</div>
