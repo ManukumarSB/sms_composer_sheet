@@ -11,6 +11,9 @@ A Flutter plugin that provides SMS composer with bottom sheet UI for iOS and And
 - ✅ **SMS Capability Detection**: Check if device can send SMS
 - ✅ **Multiple Recipients**: Support for multiple phone numbers
 - ✅ **Pre-filled Messages**: Optional message body pre-filling
+- ✅ **Success Notifications**: Automatic snackbar notifications for send status
+- ✅ **Character Counter**: Real-time character count with multi-SMS indicators
+- ✅ **Haptic Feedback**: Tactile feedback for success and error states
 
 ## Screenshots
 
@@ -50,10 +53,11 @@ No additional setup required. The plugin uses the built-in MessageUI framework.
 ```dart
 import 'package:sms_composer_sheet/sms_composer_sheet.dart';
 
-// Send SMS
+// Send SMS with in-app composer (Android) or native composer (iOS)
 final result = await SmsComposerSheet.show(
   recipients: ['+1234567890'],
   body: 'Hello from Flutter!',
+  context: context, // Required for Android in-app composer
 );
 
 if (result.presented) {
@@ -157,9 +161,10 @@ Result object returned by the `show()` method.
 - Works on physical devices (not iOS Simulator)
 
 ### Android
-- Uses SMS intent to launch default SMS app
-- Returns to Flutter app after SMS interaction
-- Limited feedback about actual SMS delivery
+- **With Context**: Shows custom in-app bottom sheet SMS composer
+- **Without Context**: Falls back to SMS intent (external app)
+- Direct SMS sending using Android SmsManager
+- Supports long messages (automatically splits)
 - Requires SMS permission in manifest
 
 ## Example App
@@ -180,8 +185,15 @@ The example app includes:
 ## Limitations
 
 - **iOS Simulator**: SMS not available on iOS Simulator
+- **Android Emulators**: Most Android emulators don't have SMS apps installed by default
 - **Android Feedback**: Limited delivery status information on Android
 - **Permissions**: Requires appropriate SMS permissions on Android
+
+## Testing
+
+- **iOS**: Test on physical devices only (not iOS Simulator)
+- **Android**: Test on physical devices or emulators with Google Play Services/SMS apps installed
+- **Emulator Setup**: For Android emulators, install Google Play Store to get SMS apps
 
 ## Contributing
 

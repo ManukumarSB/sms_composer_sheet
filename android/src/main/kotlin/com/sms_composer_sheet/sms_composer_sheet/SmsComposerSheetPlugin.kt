@@ -2,8 +2,11 @@ package com.sms_composer_sheet.sms_composer_sheet
 
 import android.app.Activity
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.telephony.SmsManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -20,6 +23,7 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
     
     companion object {
         private const val SMS_REQUEST_CODE = 1001
+        private const val SMS_PERMISSION_REQUEST_CODE = 1002
     }
 
     override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
@@ -30,13 +34,14 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
     override fun onMethodCall(call: MethodCall, result: Result) {
         when (call.method) {
             "show" -> showSmsComposer(call, result)
+            "sendSmsDirectly" -> sendSmsDirectly(call, result)
             "canSendSms" -> result.success(canSendSms())
             else -> result.notImplemented()
         }
     }
 
     private fun showSmsComposer(call: MethodCall, result: Result) {
-        val arguments = call.arguments as? Map<String, Any>
+        val arguments = call.arguments as? Map<*, *>
         if (arguments == null) {
             result.success(mapOf(
                 "presented" to false,
@@ -47,6 +52,7 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
             return
         }
 
+        @Suppress("UNCHECKED_CAST")
         val recipients = arguments["recipients"] as? List<String>
         if (recipients.isNullOrEmpty()) {
             result.success(mapOf(
@@ -84,24 +90,55 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
         try {
             pendingResult = result
             
-            // Create SMS intent with bottom sheet-style presentation
-            val smsIntent = Intent(Intent.ACTION_SENDTO).apply {
+            // Try multiple SMS intent approaches for better compatibility
+            var smsIntent: Intent? = null
+            var intentType = "sendto"
+            
+            // Primary approach: ACTION_SENDTO with smsto URI
+            val sendtoIntent = Intent(Intent.ACTION_SENDTO).apply {
                 data = Uri.parse("smsto:${recipients.joinToString(";")}")
                 putExtra("sms_body", body)
-                // Add flags for bottom sheet-like behavior
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
             
-            // Check if SMS app is available
-            if (smsIntent.resolveActivity(currentActivity.packageManager) != null) {
+            if (sendtoIntent.resolveActivity(currentActivity.packageManager) != null) {
+                smsIntent = sendtoIntent
+                intentType = "sendto"
+            } else {
+                // Fallback approach: ACTION_VIEW with sms URI
+                val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("sms:${recipients.joinToString(";")}")
+                    putExtra("sms_body", body)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                
+                if (viewIntent.resolveActivity(currentActivity.packageManager) != null) {
+                    smsIntent = viewIntent
+                    intentType = "view"
+                } else {
+                    // Second fallback: Generic ACTION_SEND
+                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, body)
+                        putExtra("address", recipients.joinToString(";"))
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    
+                    if (sendIntent.resolveActivity(currentActivity.packageManager) != null) {
+                        smsIntent = sendIntent
+                        intentType = "send"
+                    }
+                }
+            }
+            
+            if (smsIntent != null) {
                 currentActivity.startActivityForResult(smsIntent, SMS_REQUEST_CODE)
             } else {
                 pendingResult = null
                 result.success(mapOf(
                     "presented" to false,
                     "sent" to false,
-                    "error" to "No SMS app available",
+                    "error" to "No SMS app available on this device",
                     "platformResult" to "no_sms_app"
                 ))
             }
@@ -116,10 +153,114 @@ class SmsComposerSheetPlugin: FlutterPlugin, MethodCallHandler, ActivityAware, P
         }
     }
 
+    private fun sendSmsDirectly(call: MethodCall, result: Result) {
+        val arguments = call.arguments as? Map<*, *>
+        if (arguments == null) {
+            result.success(mapOf(
+                "presented" to true,
+                "sent" to false,
+                "error" to "Invalid arguments provided",
+                "platformResult" to "invalid_args"
+            ))
+            return
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val recipients = arguments["recipients"] as? List<String>
+        if (recipients.isNullOrEmpty()) {
+            result.success(mapOf(
+                "presented" to true,
+                "sent" to false,
+                "error" to "Recipients list cannot be empty",
+                "platformResult" to "no_recipients"
+            ))
+            return
+        }
+
+        val body = arguments["body"] as? String ?: ""
+        
+        // Check for SMS permission
+        val currentActivity = activity
+        if (currentActivity == null) {
+            result.success(mapOf(
+                "presented" to true,
+                "sent" to false,
+                "error" to "No activity available",
+                "platformResult" to "no_activity"
+            ))
+            return
+        }
+        
+        if (ContextCompat.checkSelfPermission(currentActivity, android.Manifest.permission.SEND_SMS) 
+            != PackageManager.PERMISSION_GRANTED) {
+            result.success(mapOf(
+                "presented" to true,
+                "sent" to false,
+                "error" to "SMS permission not granted. Please grant SMS permission in device settings.",
+                "platformResult" to "permission_denied"
+            ))
+            return
+        }
+        
+        try {
+            val smsManager = SmsManager.getDefault()
+            var allSent = true
+            var errorMessage: String? = null
+            
+            for (recipient in recipients) {
+                try {
+                    if (body.length > 160) {
+                        // Handle long messages by splitting them
+                        val parts = smsManager.divideMessage(body)
+                        smsManager.sendMultipartTextMessage(recipient, null, parts, null, null)
+                    } else {
+                        smsManager.sendTextMessage(recipient, null, body, null, null)
+                    }
+                } catch (e: Exception) {
+                    allSent = false
+                    errorMessage = "Failed to send to $recipient: ${e.message}"
+                    break
+                }
+            }
+            
+            result.success(mapOf(
+                "presented" to true,
+                "sent" to allSent,
+                "error" to errorMessage,
+                "platformResult" to if (allSent) "sent" else "partial_failure"
+            ))
+            
+        } catch (e: Exception) {
+            result.success(mapOf(
+                "presented" to true,
+                "sent" to false,
+                "error" to "SMS sending failed: ${e.message}",
+                "platformResult" to "send_failed"
+            ))
+        }
+    }
+
     private fun canSendSms(): Boolean {
         return try {
-            val smsManager = SmsManager.getDefault()
-            smsManager != null
+            val activity = this.activity ?: return false
+            
+            // Check if any SMS-related intent can be resolved
+            val sendtoIntent = Intent(Intent.ACTION_SENDTO).apply {
+                data = Uri.parse("smsto:")
+            }
+            
+            val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                data = Uri.parse("sms:")
+            }
+            
+            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+            }
+            
+            // Return true if any of these intents can be resolved
+            sendtoIntent.resolveActivity(activity.packageManager) != null ||
+            viewIntent.resolveActivity(activity.packageManager) != null ||
+            sendIntent.resolveActivity(activity.packageManager) != null
         } catch (e: Exception) {
             false
         }

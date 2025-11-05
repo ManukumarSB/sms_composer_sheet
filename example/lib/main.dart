@@ -63,6 +63,7 @@ class _SmsComposerDemoState extends State<SmsComposerDemo> {
       final result = await SmsComposerSheet.show(
         recipients: [_phoneController.text.trim()],
         body: _messageController.text,
+        context: context,
       );
 
       setState(() {
@@ -71,12 +72,12 @@ class _SmsComposerDemoState extends State<SmsComposerDemo> {
 
       if (result.presented) {
         if (result.sent) {
-          _showSnackBar('SMS sent successfully!', Colors.green);
+          _showSnackBar('✅ SMS sent successfully!', Colors.green);
         } else {
-          _showSnackBar('SMS composer was shown but not sent', Colors.orange);
+          _showSnackBar('📱 SMS composer was shown but not sent', Colors.orange);
         }
       } else {
-        _showSnackBar('Failed to show SMS composer: ${result.error}', Colors.red);
+        _showSnackBar('❌ Failed to show SMS composer: ${result.error}', Colors.red);
       }
     } catch (e) {
       setState(() {
@@ -173,8 +174,13 @@ class _SmsComposerDemoState extends State<SmsComposerDemo> {
                     if (!_canSendSms) ...[
                       const SizedBox(height: 8),
                       const Text(
-                        'SMS not available on this device',
+                        'SMS not available on this device/emulator',
                         style: TextStyle(color: Colors.red, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Note: Android emulators typically don\'t have SMS apps installed',
+                        style: TextStyle(color: Colors.grey, fontSize: 10),
                       ),
                     ],
                   ],
