@@ -16,7 +16,7 @@ The following is a set of guidelines for contributing to this Flutter plugin. Th
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by our Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [manukumarsb@example.com](mailto:manukumarsb@example.com).
+This project and everyone participating in it is governed by our Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [manubalarama@gmail.com](mailto:manubalarama@gmail.com).
 
 ### Our Pledge
 
@@ -373,6 +373,6 @@ Don't hesitate to ask questions! You can:
 
 - Create an issue for discussion
 - Start a GitHub Discussion
-- Reach out via email: manukumarsb@example.com
+- Reach out via email: manubalarama@gmail.com
 
 Thank you for contributing! 🚀

@@ -13,7 +13,7 @@ and SMS intents on Android for optimal user experience.
                        DESC
   s.homepage         = 'https://github.com/manukumarsb/sms_composer_sheet'
   s.license          = { :file => '../LICENSE' }
-  s.author           = { 'Manukumar S B' => 'manukumarsb@example.com' }
+  s.author           = { 'Manukumar S B' => 'manubalarama@gmail.com' }
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'

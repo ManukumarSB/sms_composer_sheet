@@ -423,7 +423,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - 📖 **Documentation**: [API Documentation](https://pub.dev/documentation/sms_composer_sheet/latest/)
 - 🐛 **Issues**: [GitHub Issues](https://github.com/manukumarsb/sms_composer_sheet/issues)
 - 💬 **Discussions**: [GitHub Discussions](https://github.com/manukumarsb/sms_composer_sheet/discussions)
-- 📧 **Email**: manukumarsb@example.com
+- 📧 **Email**: manubalarama@gmail.com
 
 ---
 
