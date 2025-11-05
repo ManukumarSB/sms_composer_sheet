@@ -334,79 +334,7 @@ flutter run
 - **Permissions**: Requires `SEND_SMS` permission in manifest
 - **Battery**: Some devices may have SMS restrictions for battery optimization
 
-## 🧪 Testing
 
-### Recommended Testing Setup
-
-| Platform | Environment | SMS Support |
-|----------|-------------|-------------|
-| **iOS** | Physical device | ✅ Full support |
-| **iOS** | Simulator | ❌ Not supported |
-| **Android** | Physical device | ✅ Full support |
-| **Android** | Emulator with Play Store | ✅ Supported |
-| **Android** | Basic emulator | ❌ Limited support |
-
-### Testing Checklist
-
-- [ ] Test on physical devices for both platforms
-- [ ] Verify SMS permissions are granted
-- [ ] Test with single and multiple recipients
-- [ ] Test with short and long messages (160+ characters)
-- [ ] Verify error handling for invalid phone numbers
-- [ ] Test network connectivity scenarios
-
-## 🛠️ Troubleshooting
-
-### Common Issues
-
-| Issue | Platform | Solution |
-|-------|----------|----------|
-| "SMS not available" | iOS Simulator | Use physical iOS device |
-| "Permission denied" | Android | Grant SMS permission in device settings |
-| "No SMS app available" | Android Emulator | Use emulator with Google Play Store |
-| External app opens | Android | Ensure `context` parameter is provided |
-| Build errors | Both | Run `flutter clean && flutter pub get` |
-
-### Debug Steps
-
-1. **Check SMS capability:**
-   ```dart
-   final canSend = await SmsComposerSheet.canSendSms();
-   ```
-
-2. **Verify permissions (Android):**
-   ```dart
-   final status = await SmsComposerSheet.checkPermissionStatus();
-   ```
-
-3. **Enable debug logging:**
-   ```dart
-   // Check console output for detailed error messages
-   ```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-```bash
-git clone https://github.com/manukumarsb/sms_composer_sheet.git
-cd sms_composer_sheet
-flutter pub get
-flutter analyze
-flutter test
-```
-
-### Pull Request Process
-
-1. **Fork** the repository
-2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
-3. **Make** your changes with tests
-4. **Run** `flutter analyze` and `flutter test`
-5. **Commit** your changes (`git commit -m 'Add amazing feature'`)
-6. **Push** to the branch (`git push origin feature/amazing-feature`)
-7. **Open** a Pull Request
 
 ## 📄 License
 
@@ -418,19 +346,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Inspired by iOS Messages app design
 - Thanks to all contributors and users
 
-## 📞 Support
 
-- 📖 **Documentation**: [API Documentation](https://pub.dev/documentation/sms_composer_sheet/latest/)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/manukumarsb/sms_composer_sheet/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/manukumarsb/sms_composer_sheet/discussions)
-- 📧 **Email**: manubalarama@gmail.com
 
----
-
-<div align="center">
-
-**Made with ❤️ by [Manukumar S B](https://github.com/manukumarsb)**
-
-[⭐ Star this repo](https://github.com/manukumarsb/sms_composer_sheet) • [🐛 Report Bug](https://github.com/manukumarsb/sms_composer_sheet/issues) • [💡 Request Feature](https://github.com/manukumarsb/sms_composer_sheet/issues)
-
-</div>
