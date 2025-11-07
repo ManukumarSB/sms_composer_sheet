@@ -12,7 +12,7 @@ A Flutter plugin that provides **native SMS composer functionality** with beauti
 ### 🎯 Core Features
 - **📱 Cross-Platform**: Unified API that works seamlessly on iOS and Android
 - **🍎 Native iOS Composer**: Uses `MFMessageComposeViewController` for authentic iOS experience  
-- **🤖 In-App Android Composer**: Custom bottom sheet that keeps users in your app
+- **🤖 Flexible Android Options**: Custom bottom sheet or native intent - your choice
 - **✅ Success Notifications**: Automatic feedback with haptic responses
 - **📊 Smart Character Counter**: Real-time count with multi-SMS indicators
 - **🔐 Permission Handling**: Intelligent permission management with user guidance
@@ -36,7 +36,7 @@ A Flutter plugin that provides **native SMS composer functionality** with beauti
 | Platform | Implementation | User Experience |
 |----------|---------------|------------------|
 | **iOS** | Native `MFMessageComposeViewController` | System bottom sheet, authentic iOS feel |
-| **Android** | Custom Flutter bottom sheet + `SmsManager` | In-app composer, no external app switching |
+| **Android** | Custom bottom sheet (default) or native intent | Flexible: stay in-app or use system SMS app |
 
 ## 🚀 Quick Start
 
@@ -76,7 +76,7 @@ import 'package:sms_composer_sheet/sms_composer_sheet.dart';
 final result = await SmsComposerSheet.showWithPermission(
   recipients: ['+1234567890'],
   body: 'Hello from Flutter!',
-  context: context, // Required for Android in-app experience
+  context: context, // Required for Android custom UI
 );
 
 // Handle the result
@@ -88,11 +88,21 @@ if (result.sent) {
   print('❌ Failed: ${result.error}');
 }
 
-// Alternative: Manual SMS sending (requires permission check)
-final manualResult = await SmsComposerSheet.show(
+// Alternative: Use native SMS app (Android) or composer (iOS)
+final nativeResult = await SmsComposerSheet.showNative(
   recipients: ['+1234567890'],
   body: 'Hello from Flutter!',
+);
+
+// Custom UI for Android with your own design
+final customResult = await SmsComposerSheet.showCustom(
+  recipients: ['+1234567890'],
   context: context,
+  body: 'Hello!',
+  bottomSheetBuilder: (context, recipients, body, onResult) {
+    // Your custom bottom sheet UI here
+    return YourCustomSmsComposer();
+  },
 );
 ```
 
@@ -110,10 +120,11 @@ if (!canSend) {
 }
 ```
 
-### Multiple Recipients
+### Multiple Recipients & Platform Options
 
 ```dart
-final result = await SmsComposerSheet.show(
+// Standard approach with custom Android UI
+final result = await SmsComposerSheet.showWithPermission(
   recipients: [
     '+1234567890',
     '+0987654321',
@@ -121,6 +132,38 @@ final result = await SmsComposerSheet.show(
   ],
   body: 'Group message from Flutter app!',
   context: context,
+);
+
+// Native approach - uses system SMS app on Android
+final nativeResult = await SmsComposerSheet.showNative(
+  recipients: ['+1234567890'],
+  body: 'Hello from Flutter!',
+);
+
+// Custom UI approach - fully customizable Android bottom sheet
+final customResult = await SmsComposerSheet.showCustom(
+  recipients: ['+1234567890'],
+  context: context,
+  body: 'Hello!',
+  bottomSheetBuilder: (context, recipients, body, onResult) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.purple,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: YourCustomSmsComposer(
+        recipients: recipients,
+        initialMessage: body,
+        onSend: () {
+          // Handle send action
+          onResult(SmsResult(presented: true, sent: true));
+        },
+        onCancel: () {
+          onResult(SmsResult(presented: true, sent: false));
+        },
+      ),
+    );
+  },
 );
 ```
 
@@ -214,15 +257,17 @@ if (platform == 'iOS') {
 
 #### Methods
 
-##### `show({required List<String> recipients, String? body, BuildContext? context})`
+##### `show({required List<String> recipients, String? body, BuildContext? context, bool useCustomBottomSheet, Widget Function()? bottomSheetBuilder})`
 
-Shows the SMS composer interface.
+Shows the SMS composer interface with customization options.
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `recipients` | `List<String>` | ✅ | Phone numbers (non-empty list) |
 | `body` | `String?` | ❌ | Pre-filled message content |
-| `context` | `BuildContext?` | ⚠️ | Required for Android in-app composer |
+| `context` | `BuildContext?` | ⚠️ | Required for Android custom UI |
+| `useCustomBottomSheet` | `bool` | ❌ | Use Flutter UI (true) or native (false). Default: true |
+| `bottomSheetBuilder` | `Widget Function()?` | ❌ | Custom Android bottom sheet builder |
 
 **Returns:** `Future<SmsResult>`
 
@@ -262,19 +307,45 @@ Requests SMS permission with system dialog (Android only).
 }
 ```
 
-##### `showWithPermission({required List<String> recipients, String? body, BuildContext? context})`
+##### `showWithPermission({required List<String> recipients, String? body, BuildContext? context, bool useCustomBottomSheet, Widget Function()? bottomSheetBuilder})`
 
-Shows SMS composer with automatic permission handling.
+Shows SMS composer with automatic permission handling. **Recommended method for Android.**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
 | `recipients` | `List<String>` | ✅ | Phone numbers (non-empty list) |
 | `body` | `String?` | ❌ | Pre-filled message content |
-| `context` | `BuildContext?` | ⚠️ | Required for Android in-app composer |
+| `context` | `BuildContext?` | ⚠️ | Required for Android custom UI |
+| `useCustomBottomSheet` | `bool` | ❌ | Use Flutter UI (true) or native (false). Default: true |
+| `bottomSheetBuilder` | `Widget Function()?` | ❌ | Custom Android bottom sheet builder |
 
 **Returns:** `Future<SmsResult>`
 
 **Note:** This method automatically checks and requests SMS permission before showing the composer.
+
+##### `showNative({required List<String> recipients, String? body})`
+
+Shows native SMS implementation only. Uses system SMS app on Android and MFMessageComposeViewController on iOS.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recipients` | `List<String>` | ✅ | Phone numbers (non-empty list) |
+| `body` | `String?` | ❌ | Pre-filled message content |
+
+**Returns:** `Future<SmsResult>`
+
+##### `showCustom({required List<String> recipients, required BuildContext context, String? body, Widget Function()? bottomSheetBuilder})`
+
+Shows custom Android bottom sheet (or native iOS composer). Always uses custom UI on Android.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `recipients` | `List<String>` | ✅ | Phone numbers (non-empty list) |
+| `context` | `BuildContext` | ✅ | Build context for bottom sheet |
+| `body` | `String?` | ❌ | Pre-filled message content |
+| `bottomSheetBuilder` | `Widget Function()?` | ❌ | Custom bottom sheet builder |
+
+**Returns:** `Future<SmsResult>`
 
 ##### `platformName`
 
@@ -318,6 +389,10 @@ flutter run
 - 📱 Platform information display
 - 🔍 SMS capability detection
 - 📝 Interactive form with validation
+- 🎨 Three SMS sending methods:
+  - **With Permission** (recommended for Android)
+  - **Native SMS** (system SMS app)
+  - **Custom UI** (demonstrates custom bottom sheet design)
 - 📊 Real-time character counting
 - 📋 Detailed result logging
 - 🎨 Beautiful Material Design UI

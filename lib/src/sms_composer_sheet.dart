@@ -15,11 +15,13 @@ import 'widgets/sms_composer_widget.dart';
 class SmsComposerSheet {
   static const MethodChannel _channel = MethodChannel('sms_composer_sheet');
 
-  /// Show SMS composer as a bottom sheet
+  /// Show SMS composer with custom UI options
   ///
   /// [recipients] - List of phone numbers (required, non-empty)
   /// [body] - Optional pre-filled message body
-  /// [context] - Required for Android to show in-app bottom sheet
+  /// [context] - Required for Android custom bottom sheet
+  /// [useCustomBottomSheet] - For Android: use Flutter bottom sheet (true) or native intent (false)
+  /// [bottomSheetBuilder] - Custom builder for Android bottom sheet
   ///
   /// Returns [SmsResult] with operation details
   ///
@@ -28,6 +30,8 @@ class SmsComposerSheet {
     required List<String> recipients,
     String? body,
     BuildContext? context,
+    bool useCustomBottomSheet = true,
+    Widget Function(BuildContext, List<String>, String?, Function(SmsResult))? bottomSheetBuilder,
   }) async {
     // Input validation
     if (recipients.isEmpty) {
@@ -43,11 +47,11 @@ class SmsComposerSheet {
     }
 
     // Platform-specific implementation
-    if (Platform.isAndroid && context != null) {
+    if (Platform.isAndroid && context != null && useCustomBottomSheet) {
       // Use custom in-app bottom sheet for Android
-      return _showAndroidBottomSheet(context, cleanRecipients, body);
+      return _showAndroidBottomSheet(context, cleanRecipients, body, bottomSheetBuilder);
     } else {
-      // Use native implementation for iOS or when context is not provided
+      // Use native implementation for iOS or when custom bottom sheet is disabled
       return _showNative(cleanRecipients, body);
     }
   }
@@ -94,6 +98,7 @@ class SmsComposerSheet {
     BuildContext context,
     List<String> recipients,
     String? body,
+    Widget Function(BuildContext, List<String>, String?, Function(SmsResult))? customBuilder,
   ) async {
     try {
       final completer = Completer<SmsResult>();
@@ -103,6 +108,19 @@ class SmsComposerSheet {
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (BuildContext context) {
+          if (customBuilder != null) {
+            return customBuilder(
+              context,
+              recipients,
+              body,
+              (result) {
+                if (!completer.isCompleted) {
+                  completer.complete(result);
+                }
+              },
+            );
+          }
+          
           return Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -216,12 +234,23 @@ class SmsComposerSheet {
 
   /// Show SMS composer with automatic permission handling
   ///
-  /// This method automatically checks and requests SMS permission if needed
-  /// before showing the SMS composer interface
+  /// This is the recommended method for Android as it handles permissions automatically.
+  /// For iOS, this behaves the same as `show()` since no permission is required.
+  ///
+  /// [recipients] - List of phone numbers (required, non-empty)
+  /// [body] - Optional pre-filled message body
+  /// [context] - Required for Android custom bottom sheet (recommended)
+  /// [useCustomBottomSheet] - For Android: use Flutter bottom sheet (true) or native intent (false)
+  /// [bottomSheetBuilder] - Custom builder for Android bottom sheet UI
+  ///
+  /// Returns [SmsResult] with operation details
+  /// Throws [ArgumentError] if recipients list is empty
   static Future<SmsResult> showWithPermission({
     required List<String> recipients,
     String? body,
     BuildContext? context,
+    bool useCustomBottomSheet = true,
+    Widget Function(BuildContext, List<String>, String?, Function(SmsResult))? bottomSheetBuilder,
   }) async {
     // Input validation
     if (recipients.isEmpty) {
@@ -240,11 +269,23 @@ class SmsComposerSheet {
     if (Platform.isIOS) {
       // ignore: use_build_context_synchronously
       // Safe to use context here as no async operations precede this
-      return show(recipients: cleanRecipients, body: body, context: context);
+      return show(
+        recipients: cleanRecipients,
+        body: body,
+        context: context,
+        useCustomBottomSheet: useCustomBottomSheet,
+        bottomSheetBuilder: bottomSheetBuilder,
+      );
     }
 
     // For Android, handle permission and SMS sending
-    return _handleAndroidPermissionAndShow(cleanRecipients, body, context);
+    return _handleAndroidPermissionAndShow(
+      cleanRecipients,
+      body,
+      context,
+      useCustomBottomSheet,
+      bottomSheetBuilder,
+    );
   }
 
   /// Handle Android permission check and SMS composer display
@@ -252,6 +293,8 @@ class SmsComposerSheet {
     List<String> recipients,
     String? body,
     BuildContext? context,
+    bool useCustomBottomSheet,
+    Widget Function(BuildContext, List<String>, String?, Function(SmsResult))? bottomSheetBuilder,
   ) async {
     // Check and request permission if needed
     final permissionStatus = await checkPermissionStatus();
@@ -272,19 +315,61 @@ class SmsComposerSheet {
     }
 
     // Permission granted, proceed with SMS composer
-    if (context != null) {
+    if (context != null && useCustomBottomSheet) {
       try {
-        // ignore: use_build_context_synchronously
         // Safe to use context here as permission dialogs are system-level
         // and don't affect Flutter widget tree state
-        return await _showAndroidBottomSheet(context, recipients, body);
+        // ignore: use_build_context_synchronously
+        return await _showAndroidBottomSheet(context, recipients, body, bottomSheetBuilder);
       } catch (e) {
         // Fallback to native implementation if context is invalid
         return _showNative(recipients, body);
       }
     } else {
-      // Use native implementation when context is not provided
+      // Use native implementation when context is not provided or custom bottom sheet is disabled
       return _showNative(recipients, body);
     }
+  }
+
+  /// Convenience method: Show SMS with native intent (Android) or native composer (iOS)
+  ///
+  /// This method bypasses custom bottom sheets and uses the platform's native SMS implementation.
+  /// Useful when you want consistent native behavior across platforms.
+  static Future<SmsResult> showNative({
+    required List<String> recipients,
+    String? body,
+  }) async {
+    // Input validation
+    if (recipients.isEmpty) {
+      throw ArgumentError('Recipients list cannot be empty');
+    }
+
+    final cleanRecipients =
+        recipients.map((r) => r.trim()).where((r) => r.isNotEmpty).toList();
+
+    if (cleanRecipients.isEmpty) {
+      throw ArgumentError('No valid recipients provided');
+    }
+
+    return _showNative(cleanRecipients, body);
+  }
+
+  /// Convenience method: Show SMS with custom Android bottom sheet
+  ///
+  /// This method always uses the custom Flutter bottom sheet on Android and native on iOS.
+  /// Automatically handles permissions on Android.
+  static Future<SmsResult> showCustom({
+    required List<String> recipients,
+    required BuildContext context,
+    String? body,
+    Widget Function(BuildContext, List<String>, String?, Function(SmsResult))? bottomSheetBuilder,
+  }) async {
+    return showWithPermission(
+      recipients: recipients,
+      body: body,
+      context: context,
+      useCustomBottomSheet: true,
+      bottomSheetBuilder: bottomSheetBuilder,
+    );
   }
 }
