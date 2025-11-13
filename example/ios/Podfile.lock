@@ -2,7 +2,7 @@ PODS:
   - Flutter (1.0.0)
   - integration_test (0.0.1):
     - Flutter
-  - sms_composer_sheet (0.0.1):
+  - sms_composer_sheet (1.0.0):
     - Flutter
 
 DEPENDENCIES:
@@ -21,7 +21,7 @@ EXTERNAL SOURCES:
 SPEC CHECKSUMS:
   Flutter: e0871f40cf51350855a761d2e70bf5af5b9b5de7
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
-  sms_composer_sheet: 7b62738a7678c26f56bb29517d744c82430cdef1
+  sms_composer_sheet: e9d5d826d9d0a69ab4db1cfc80d37cc6d881c728
 
 PODFILE CHECKSUM: 4305caec6b40dde0ae97be1573c53de1882a07e5
 

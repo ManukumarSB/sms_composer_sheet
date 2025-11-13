@@ -7,6 +7,11 @@ import MessageUI
 public class SmsComposerSheetPlugin: NSObject, FlutterPlugin, MFMessageComposeViewControllerDelegate {
     
     private var pendingResult: FlutterResult?
+    private var recipientsQueue: [String] = []
+    private var messageBody: String = ""
+    private var currentRecipientIndex: Int = 0
+    private var completedSends: Int = 0
+    private var failedSends: Int = 0
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "sms_composer_sheet", binaryMessenger: registrar.messenger())
@@ -94,11 +99,32 @@ public class SmsComposerSheetPlugin: NSObject, FlutterPlugin, MFMessageComposeVi
         
         pendingResult = result
         
-        // Create message composer
+        // Initialize multiple recipient handling
+        recipientsQueue = recipients
+        messageBody = body
+        currentRecipientIndex = 0
+        completedSends = 0
+        failedSends = 0
+        
+        // Start sending to first recipient
+        presentNextSmsComposer()
+    }
+    
+    private func presentNextSmsComposer() {
+        // Check if we have more recipients to process
+        guard currentRecipientIndex < recipientsQueue.count else {
+            // All recipients processed, return final result
+            handleFinalResult()
+            return
+        }
+        
+        let currentRecipient = recipientsQueue[currentRecipientIndex]
+        
+        // Create message composer for current recipient
         let messageComposer = MFMessageComposeViewController()
         messageComposer.messageComposeDelegate = self
-        messageComposer.recipients = recipients
-        messageComposer.body = body
+        messageComposer.recipients = [currentRecipient] // Single recipient only
+        messageComposer.body = messageBody
         
         // Configure for maximum screen coverage like WhatsApp
         if #available(iOS 15.0, *) {
@@ -137,13 +163,17 @@ public class SmsComposerSheetPlugin: NSObject, FlutterPlugin, MFMessageComposeVi
         
         // Find top-most view controller
         guard let topViewController = getTopMostViewController() else {
-            pendingResult = nil
-            result([
-                "presented": false,
-                "sent": false,
-                "error": "no_view_controller",
-                "platformResult": "presentation_error"
-            ])
+            // Failed to find view controller for this recipient
+            failedSends += 1
+            currentRecipientIndex += 1
+            
+            // Check if this is the last recipient
+            if currentRecipientIndex >= recipientsQueue.count {
+                handleFinalResult()
+            } else {
+                // Continue with next recipient
+                presentNextSmsComposer()
+            }
             return
         }
         
@@ -154,51 +184,77 @@ public class SmsComposerSheetPlugin: NSObject, FlutterPlugin, MFMessageComposeVi
         }
     }
     
+    private func handleFinalResult() {
+        guard let flutterResult = pendingResult else {
+            return
+        }
+        
+        pendingResult = nil
+        
+        // Determine overall result
+        let totalRecipients = recipientsQueue.count
+        let wasSuccessful = completedSends > 0
+        let wasPresented = (completedSends + failedSends) > 0
+        
+        print("SMS Final Result - Total: \(totalRecipients), Completed: \(completedSends), Failed: \(failedSends)")
+        
+        // Reset state
+        recipientsQueue.removeAll()
+        messageBody = ""
+        currentRecipientIndex = 0
+        completedSends = 0
+        failedSends = 0
+        
+        flutterResult([
+            "presented": wasPresented,
+            "sent": wasSuccessful,
+            "platformResult": wasSuccessful ? "sent" : (wasPresented ? "cancelled" : "failed"),
+            "error": nil
+        ])
+    }
+    
     // MARK: - MFMessageComposeViewControllerDelegate
     
     public func messageComposeViewController(_ controller: MFMessageComposeViewController, 
                                            didFinishWith result: MessageComposeResult) {
         
         // Debug: Print the result to understand what's happening
-        print("SMS Delegate called with result: \(result.rawValue)")
+        print("SMS Delegate called with result: \(result.rawValue) for recipient \(currentRecipientIndex + 1) of \(recipientsQueue.count)")
         
         controller.dismiss(animated: true) { [weak self] in
-            self?.handleComposeResult(result)
+            self?.handleSingleRecipientResult(result)
         }
     }
     
-    private func handleComposeResult(_ result: MessageComposeResult) {
-        guard let flutterResult = pendingResult else {
-            print("SMS Error: No pending result found")
-            return
-        }
-        
-        pendingResult = nil
-        
-        let (sent, platformResult) = mapComposeResult(result)
-        
-        print("SMS Result - Sent: \(sent), Platform: \(platformResult)")
-        
-        flutterResult([
-            "presented": true,
-            "sent": sent,
-            "platformResult": platformResult,
-            "error": nil
-        ])
-    }
-    
-    private func mapComposeResult(_ result: MessageComposeResult) -> (Bool, String) {
+    private func handleSingleRecipientResult(_ result: MessageComposeResult) {
+        // Track result for this recipient
         switch result {
         case .sent:
-            return (true, "sent")
+            completedSends += 1
+            print("SMS sent successfully to recipient \(currentRecipientIndex + 1)")
         case .cancelled:
-            return (false, "cancelled")  
+            print("SMS cancelled for recipient \(currentRecipientIndex + 1)")
         case .failed:
-            return (false, "failed")
+            failedSends += 1
+            print("SMS failed for recipient \(currentRecipientIndex + 1)")
         @unknown default:
-            return (false, "unknown")
+            failedSends += 1
+            print("SMS unknown result for recipient \(currentRecipientIndex + 1)")
+        }
+        
+        // Move to next recipient
+        currentRecipientIndex += 1
+        
+        // Check if we have more recipients
+        if currentRecipientIndex < recipientsQueue.count {
+            // Present composer for next recipient
+            presentNextSmsComposer()
+        } else {
+            // All recipients processed
+            handleFinalResult()
         }
     }
+    
     
     // MARK: - Helper Methods
     
@@ -245,6 +301,11 @@ public class SmsComposerSheetPlugin: NSObject, FlutterPlugin, MFMessageComposeVi
 public class SmsComposerSheetPluginLegacy: NSObject, FlutterPlugin, MFMessageComposeViewControllerDelegate {
     
     private var pendingResult: FlutterResult?
+    private var recipientsQueue: [String] = []
+    private var messageBody: String = ""
+    private var currentRecipientIndex: Int = 0
+    private var completedSends: Int = 0
+    private var failedSends: Int = 0
     
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "sms_composer_sheet", binaryMessenger: registrar.messenger())
@@ -313,29 +374,83 @@ public class SmsComposerSheetPluginLegacy: NSObject, FlutterPlugin, MFMessageCom
         
         pendingResult = result
         
+        // Initialize multiple recipient handling for legacy iOS
+        recipientsQueue = recipients
+        messageBody = body
+        currentRecipientIndex = 0
+        completedSends = 0
+        failedSends = 0
+        
+        // Start sending to first recipient
+        presentNextSmsComposerLegacy()
+    }
+    
+    private func presentNextSmsComposerLegacy() {
+        // Check if we have more recipients to process
+        guard currentRecipientIndex < recipientsQueue.count else {
+            // All recipients processed, return final result
+            handleFinalResultLegacy()
+            return
+        }
+        
+        let currentRecipient = recipientsQueue[currentRecipientIndex]
+        
         // Create message composer with basic presentation for iOS 12
         let messageComposer = MFMessageComposeViewController()
         messageComposer.messageComposeDelegate = self
-        messageComposer.recipients = recipients
-        messageComposer.body = body
+        messageComposer.recipients = [currentRecipient] // Single recipient only
+        messageComposer.body = messageBody
         messageComposer.modalPresentationStyle = .fullScreen
         
         // Find root view controller
         guard let rootViewController = getRootViewControllerLegacy() else {
-            pendingResult = nil
-            result([
-                "presented": false,
-                "sent": false,
-                "error": "no_view_controller",
-                "platformResult": "presentation_error"
-            ])
+            // Failed to find view controller for this recipient
+            failedSends += 1
+            currentRecipientIndex += 1
+            
+            // Check if this is the last recipient
+            if currentRecipientIndex >= recipientsQueue.count {
+                handleFinalResultLegacy()
+            } else {
+                // Continue with next recipient
+                presentNextSmsComposerLegacy()
+            }
             return
         }
         
         // Present the composer
-        DispatchQueue.main.async {
+        DispatchQueue.main.async { [weak self] in
             rootViewController.present(messageComposer, animated: true, completion: nil)
         }
+    }
+    
+    private func handleFinalResultLegacy() {
+        guard let flutterResult = pendingResult else {
+            return
+        }
+        
+        pendingResult = nil
+        
+        // Determine overall result
+        let totalRecipients = recipientsQueue.count
+        let wasSuccessful = completedSends > 0
+        let wasPresented = (completedSends + failedSends) > 0
+        
+        print("SMS Legacy Final Result - Total: \(totalRecipients), Completed: \(completedSends), Failed: \(failedSends)")
+        
+        // Reset state
+        recipientsQueue.removeAll()
+        messageBody = ""
+        currentRecipientIndex = 0
+        completedSends = 0
+        failedSends = 0
+        
+        flutterResult([
+            "presented": wasPresented,
+            "sent": wasSuccessful,
+            "platformResult": wasSuccessful ? "sent" : (wasPresented ? "cancelled" : "failed"),
+            "error": nil
+        ])
     }
     
     private func getRootViewControllerLegacy() -> UIViewController? {
@@ -358,37 +473,36 @@ public class SmsComposerSheetPluginLegacy: NSObject, FlutterPlugin, MFMessageCom
                                            didFinishWith result: MessageComposeResult) {
         
         controller.dismiss(animated: true) { [weak self] in
-            self?.handleLegacyComposeResult(result)
+            self?.handleSingleRecipientResultLegacy(result)
         }
     }
     
-    private func handleLegacyComposeResult(_ result: MessageComposeResult) {
-        guard let flutterResult = pendingResult else {
-            return
-        }
-        
-        pendingResult = nil
-        
-        let (sent, platformResult) = mapLegacyComposeResult(result)
-        
-        flutterResult([
-            "presented": true,
-            "sent": sent,
-            "platformResult": platformResult,
-            "error": nil
-        ])
-    }
-    
-    private func mapLegacyComposeResult(_ result: MessageComposeResult) -> (Bool, String) {
+    private func handleSingleRecipientResultLegacy(_ result: MessageComposeResult) {
+        // Track result for this recipient
         switch result {
         case .sent:
-            return (true, "sent")
+            completedSends += 1
+            print("SMS Legacy sent successfully to recipient \(currentRecipientIndex + 1)")
         case .cancelled:
-            return (false, "cancelled")  
+            print("SMS Legacy cancelled for recipient \(currentRecipientIndex + 1)")
         case .failed:
-            return (false, "failed")
+            failedSends += 1
+            print("SMS Legacy failed for recipient \(currentRecipientIndex + 1)")
         @unknown default:
-            return (false, "unknown")
+            failedSends += 1
+            print("SMS Legacy unknown result for recipient \(currentRecipientIndex + 1)")
+        }
+        
+        // Move to next recipient
+        currentRecipientIndex += 1
+        
+        // Check if we have more recipients
+        if currentRecipientIndex < recipientsQueue.count {
+            // Present composer for next recipient
+            presentNextSmsComposerLegacy()
+        } else {
+            // All recipients processed
+            handleFinalResultLegacy()
         }
     }
 }
